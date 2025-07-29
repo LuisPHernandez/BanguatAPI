@@ -16,34 +16,24 @@ body = f"""<?xml version="1.0" encoding="utf-8"?>
 
 # Returns today's rate of change
 def tipoCambioHoy():
-    max_retries = 5
+    try:
+        response = requests.post(url, data=body, headers=headers, timeout=10)
+        response.raise_for_status()  # raise error for bad HTTP status
 
-    for attempt in range(max_retries):
-        try:
-            response = requests.post(url, data=body, headers=headers, timeout=10)
-            response.raise_for_status()  # raise error for bad HTTP status
+        root = ET.fromstring(response.text)
 
-            root = ET.fromstring(response.text)
+        namespaces = {
+            'soap': 'http://schemas.xmlsoap.org/soap/envelope/',
+            'ns': 'http://www.banguat.gob.gt/variables/ws/'
+        }
 
-            namespaces = {
-                'soap': 'http://schemas.xmlsoap.org/soap/envelope/',
-                'ns': 'http://www.banguat.gob.gt/variables/ws/'
-            }
+        referencia = root.find('.//ns:referencia', namespaces)
 
-            referencia = root.find('.//ns:referencia', namespaces)
+        if referencia is not None:
+            rate = float(referencia.text)
+            return rate
+        else:
+            raise ValueError("No se encontraron datos en la respuesta")
 
-            if referencia is not None:
-                rate = float(referencia.text)
-                return rate
-            else:
-                raise ValueError("No se encontraron datos en la respuesta")
-
-        except Exception as e:
-            print(f"[Intento {attempt + 1}] Error: {e}")
-            if attempt < max_retries - 1:
-                sleep_time = 3 ** attempt
-                print(f"Reintentando en {sleep_time} segundos...")
-                time.sleep(sleep_time)
-            else:
-                print("Todos los intentos fallaron.")
-                return None
+    except Exception as e:
+        raise e

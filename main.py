@@ -2,8 +2,15 @@ from datetime import datetime, timedelta
 from tipoCambio import tipoCambioHoy
 from guardarTiposDeCambio import guardarTiposDeCambio
 from obtenerFecha import obtenerUltimaFecha
+import requests
+import tenacity
 
-def run_periodically(interval_minutes=5):
+@tenacity.retry(
+        retry=tenacity.retry_if_exception_type((ValueError, requests.exceptions.ConnectionError)),
+        wait=tenacity.wait_exponential(multiplier=1,min=1,max=30),
+        stop=tenacity.stop_after_attempt(6)
+)
+def run_periodically():
     fecha_actual = obtenerUltimaFecha()
     if (fecha_actual != None):
         next_day = (fecha_actual + timedelta(days=1)).strftime("%d/%m/%Y")
